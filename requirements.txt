@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+ultralytics
+onnxruntime
+insightface
+opencv-python-headless
+websockets
+python-multipart
