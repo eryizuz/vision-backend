@@ -33,9 +33,17 @@ async def root():
 @app.websocket("/ws/PersonaldeAmazonas")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    # Aumentar tiempo de espera de ping en el servidor FastAPI
     try:
         while True:
-            data = await websocket.receive_json()
+            # Añadir un timeout a la recepción para evitar bloqueos eternos
+            try:
+                data = await asyncio.wait_for(websocket.receive_json(), timeout=60.0)
+            except asyncio.TimeoutError:
+                logger.info("Timeout esperando datos del cliente, enviando ping...")
+                await websocket.send_text("ping")
+                continue
+                
             payload = data.get("data", {})
             frame_b64 = payload.get('frame')
             
