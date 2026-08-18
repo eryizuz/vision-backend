@@ -6,8 +6,8 @@ Servidor backend para procesamiento de IA y análisis de video.
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone <URL-del-repo>
-    cd "SERVER-IA"
+    git clone https://github.com/eryizuz/vision-backend.git
+    cd vision-backend
     ```
 
 2.  **Crear y activar un entorno virtual:**
