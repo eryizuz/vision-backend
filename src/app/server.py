@@ -5,6 +5,7 @@ import time
 import cv2
 import numpy as np
 import base64
+import json
 from src.app.app import ClientWorker
 from src.analityc.core.utils.overlay import Overlay
 from src.analityc.config import config
@@ -62,15 +63,18 @@ async def websocket_endpoint(websocket: WebSocket):
             worker.frame_counter += 1
             
             # Procesamiento
-            detections = worker.inference.process_frame(frame)
+            detections, tray_boxes = worker.inference.process_frame(frame)
             demographics = worker.demographics.analyze(frame)
             attendance = attendance_tracker.check_interaction(detections)
             seller_eff = seller_efficiency.calculate(attendance)
             stock_info = stock_monitor.monitor(detections)
             unique_people = worker.people_counter.update(detections)
             
+            # Tray detection check (still needed for overall status)
+            holding_tray_detected = any(d.get('holding_tray', False) for d in detections)
+            
             # Dibujar overlay
-            annotated_frame = overlay.draw(frame, detections)
+            annotated_frame = overlay.draw(frame, detections, tray_boxes)
             
             # Codificar frame anotado
             _, buffer = cv2.imencode(".jpg", annotated_frame)
@@ -90,13 +94,21 @@ async def websocket_endpoint(websocket: WebSocket):
                         "persons_inside": len(detections),
                         "active_tracks": len(detections),
                         "people_counter": {"unique_total": unique_people},
+                        "detections": detections,
                         "demographics": demographics,
                         "attendance": attendance,
                         "seller_efficiency": seller_eff,
-                        "stock": stock_info
+                        "stock": stock_info,
+                        "holding_tray_detected": holding_tray_detected
                     }
                 }
             }
+            
+            # Log del JSON completo (sin imagen) para evaluación
+            log_data = response['data'].copy()
+            log_data.pop('processed_image', None)
+            logger.info(f"Frame {worker.frame_counter} Data: {json.dumps(log_data, indent=2)}")
+            
             try:
                 await websocket.send_json(response)
             except (RuntimeError, WebSocketDisconnect):
